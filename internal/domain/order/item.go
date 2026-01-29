@@ -1,7 +1,10 @@
 package order
 
+type ProductID string
+
 type Item struct {
-	Name     string
-	Price    Money
-	Quantity int
+	ProductID ProductID
+	Name      string
+	Price     Money
+	Quantity  int
 }
