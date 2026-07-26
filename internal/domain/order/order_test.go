@@ -25,6 +25,13 @@ func TestNewOrder(t *testing.T) {
 	}
 }
 
+func TestCalculateTotal_EmptyItems(t *testing.T) {
+	_, err := CalculateTotal([]Item{})
+	if err != ErrEmptyOrder {
+		t.Errorf("expected ErrEmptyOrder, got %v", err)
+	}
+}
+
 func TestNewOrder_EmptyItems(t *testing.T) {
 	_, err := NewOrder([]Item{})
 	if err != ErrEmptyOrder {
@@ -41,7 +48,7 @@ func TestOrder_Pay(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// 1. Successful payment
+	// 1. successful payment
 	err = o.Pay()
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
@@ -51,7 +58,7 @@ func TestOrder_Pay(t *testing.T) {
 		t.Errorf("expected status %s, got %s", StatusPaid, o.Status)
 	}
 
-	// 2. Repeat payment attempt -> should return ErrInvalidState
+	// 2. repeat payment attempt -> should return ErrInvalidState
 	err = o.Pay()
 	if err != ErrInvalidState {
 		t.Errorf("expected ErrInvalidState, got %v", err)
@@ -63,13 +70,40 @@ func TestCalculateTotalMultipleItems(t *testing.T) {
 		{Name: "B", Price: Money{Amount: 200, Currency: "USD"}, Quantity: 2}, // 400
 	}
 
-	o, err := NewOrder(items)
+	total, err := CalculateTotal(items)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	expected := int64(700)
-	if o.Total.Amount != expected {
-		t.Errorf("expected total %d, got %d", expected, o.Total.Amount)
+	if total.Amount != expected {
+		t.Errorf("expected total %d, got %d", expected, total.Amount)
+	}
+}
+
+func TestOrder_Cancel(t *testing.T) {
+	items := []Item{
+		{Name: "Item1", Price: Money{Amount: 100, Currency: "USD"}, Quantity: 1},
+	}
+
+	o, err := NewOrder(items)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// 1. successful cancel
+	err = o.Cancel()
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	if o.Status != StatusCanceled {
+		t.Errorf("expected status %s, got %s", StatusCanceled, o.Status)
+	}
+
+	// 2. cancel already canceled order -> should return ErrInvalidState
+	err = o.Cancel()
+	if err != ErrInvalidState {
+		t.Errorf("expected ErrInvalidState, got %v", err)
 	}
 }
