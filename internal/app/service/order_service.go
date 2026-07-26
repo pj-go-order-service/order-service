@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/pj-go-order-service/order-service/internal/domain/order"
@@ -21,19 +19,25 @@ func NewOrderService(repo ports.OrderRepository) *OrderService {
 }
 
 // CreateOrder создаёт новый заказ
-func (s *OrderService) CreateOrder(ctx context.Context, items []order.Item) (*order.Order, error) {
-	if len(items) == 0 {
+func (s *OrderService) CreateOrder(ctx context.Context, cmd CreateOrderCommand) (*CreateOrderResult, error) {
+	if len(cmd.Items) == 0 {
 		return nil, order.ErrEmptyOrder
 	}
 
-	total := order.CalculateTotal(items) // экспортированная функция из domain
+	items := make([]order.Item, 0, len(cmd.Items))
+	for _, it := range cmd.Items {
+		price := order.NewMoney(it.Price, "RUB")
+		item := order.Item{
+			ProductID: order.ProductID(it.ProductID),
+			Price:     price,
+			Quantity:  it.Quantity,
+		}
+		items = append(items, item)
+	}
 
-	newOrder := &order.Order{
-		ID:        uuid.New(),
-		Items:     items,
-		Total:     total,
-		Status:    order.StatusCreated,
-		CreatedAt: time.Now(), // можно оставить time.Now() напрямую
+	newOrder, err := order.NewOrder(items)
+	if err != nil {
+		return nil, err
 	}
 
 	// сохраняем заказ в репозитории
@@ -41,7 +45,10 @@ func (s *OrderService) CreateOrder(ctx context.Context, items []order.Item) (*or
 		return nil, err
 	}
 
-	return newOrder, nil
+	return &CreateOrderResult{
+		OrderID: newOrder.ID,
+		Status:  newOrder.Status,
+	}, nil
 }
 
 // PayOrder меняет статус заказа на Paid
@@ -50,14 +57,24 @@ func (s *OrderService) PayOrder(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-
-	if o.Status != order.StatusCreated {
-		return order.ErrInvalidState
+	if o == nil {
+		return order.ErrNotFound
 	}
 
-	o.Status = order.StatusPaid
+	if err := o.Pay(); err != nil {
+		return err
+	}
 
 	return s.repo.Save(ctx, o)
+}
+
+// GetOrder возвращает заказ по ID
+func (s *OrderService) GetOrder(ctx context.Context, id uuid.UUID) (*order.Order, error) {
+	o, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return o, nil
 }
 
 // CancelOrder меняет статус заказа на Cancelled
@@ -66,12 +83,13 @@ func (s *OrderService) CancelOrder(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-
-	if o.Status != order.StatusCreated {
-		return errors.New("order cannot be cancelled")
+	if o == nil {
+		return order.ErrNotFound
 	}
 
-	o.Status = order.StatusCanceled
+	if err := o.Cancel(); err != nil {
+		return err
+	}
 
 	return s.repo.Save(ctx, o)
 }

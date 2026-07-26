@@ -19,7 +19,10 @@ func NewOrder(items []Item) (*Order, error) {
 		return nil, ErrEmptyOrder
 	}
 
-	total := CalculateTotal(items)
+	total, err := CalculateTotal(items)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Order{
 		ID:        uuid.New(),
@@ -38,7 +41,19 @@ func (o *Order) Pay() error {
 	return nil
 }
 
-func CalculateTotal(items []Item) Money {
+func (o *Order) Cancel() error {
+	if o.Status != StatusCreated {
+		return ErrInvalidState
+	}
+	o.Status = StatusCanceled
+	return nil
+}
+
+func CalculateTotal(items []Item) (Money, error) {
+	if len(items) == 0 {
+		return Money{}, ErrEmptyOrder
+	}
+
 	var total int64
 	currency := items[0].Price.Currency
 
@@ -46,5 +61,5 @@ func CalculateTotal(items []Item) Money {
 		total += item.Price.Amount * int64(item.Quantity)
 	}
 
-	return NewMoney(total, currency)
+	return NewMoney(total, currency), nil
 }

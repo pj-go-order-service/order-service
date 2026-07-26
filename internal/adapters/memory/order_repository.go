@@ -33,7 +33,7 @@ func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order.Ord
 
 	o, ok := r.orders[id]
 	if !ok {
-		return nil, nil
+		return nil, order.ErrNotFound
 	}
 
 	return o, nil

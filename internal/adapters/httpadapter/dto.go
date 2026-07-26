@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 type CreateOrderRequest struct {
 	Items []CreateOrderItem `json:"items"`

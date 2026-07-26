@@ -1,7 +1,7 @@
 package order
 
 type Money struct {
-	Amount   int64 // в минимальных единицах (центы)
+	Amount   int64 // в минимальных единицах
 	Currency string
 }
 
