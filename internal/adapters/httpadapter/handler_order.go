@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/pj-go-order-service/order-service/internal/app/service"
+	"github.com/pj-go-order-service/order-service/internal/domain/order"
 )
 
 type OrderHandler struct {
@@ -23,19 +24,17 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := service.CreateOrderCommand{
-		Items: make([]service.CreateOrderItem, 0, len(req.Items)),
-	}
+	items := make([]order.Item, 0, len(req.Items))
 
 	for _, it := range req.Items {
-		cmd.Items = append(cmd.Items, service.CreateOrderItem{
-			ProductID: it.ProductID,
-			Price:     it.Price,
+		items = append(items, order.Item{
+			ProductID: order.ProductID(it.ProductID),
+			Price:     order.NewMoney(it.Price, "USD"),
 			Quantity:  it.Quantity,
 		})
 	}
 
-	o, err := h.service.CreateOrder(r.Context(), cmd)
+	o, err := h.service.CreateOrder(r.Context(), items)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

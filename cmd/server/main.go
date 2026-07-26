@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/pj-go-order-service/order-service/internal/adapters/httpadapter"
+	httpadapter "github.com/pj-go-order-service/order-service/internal/adapters/httpadapter"
 	"github.com/pj-go-order-service/order-service/internal/adapters/memory"
 	"github.com/pj-go-order-service/order-service/internal/app/service"
 )

@@ -41,11 +41,7 @@ func TestOrderService_CreateOrder(t *testing.T) {
 		},
 	}
 
-	cmd := service.CreateOrderCommand{
-		Items: items,
-	}
-
-	_, err := svc.CreateOrder(context.Background(), cmd)
+	_, err := svc.CreateOrder(context.Background(), items)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
