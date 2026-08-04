@@ -10,4 +10,5 @@ import (
 type OrderRepository interface {
 	Save(ctx context.Context, o *order.Order) error
 	GetByID(ctx context.Context, id uuid.UUID) (*order.Order, error)
+	Ping(ctx context.Context) error
 }

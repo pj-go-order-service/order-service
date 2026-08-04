@@ -65,6 +65,10 @@ func (r *OrderRepository) Save(ctx context.Context, o *order.Order) error {
 	return tx.Commit(ctx)
 }
 
+func (r *OrderRepository) Ping(ctx context.Context) error {
+	return r.pool.Ping(ctx)
+}
+
 func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order.Order, error) {
 	o := &order.Order{}
 

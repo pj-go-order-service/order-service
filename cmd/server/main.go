@@ -9,14 +9,21 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/pj-go-order-service/order-service/docs"
 	httpadapter "github.com/pj-go-order-service/order-service/internal/adapters/httpadapter"
 	"github.com/pj-go-order-service/order-service/internal/adapters/memory"
 	"github.com/pj-go-order-service/order-service/internal/adapters/postgres"
 	"github.com/pj-go-order-service/order-service/internal/app/service"
 	"github.com/pj-go-order-service/order-service/internal/config"
 	"github.com/pj-go-order-service/order-service/internal/ports"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// @title Order Service API
+// @version 1.0
+// @description Микросервис управления заказами на Go. Чистая архитектура + DDD.
+// @host localhost:8080
+// @BasePath /
 func main() {
 	cfg := config.Load()
 
@@ -37,10 +44,14 @@ func main() {
 
 	orderService := service.NewOrderService(repo)
 	handler := httpadapter.NewOrderHandler(orderService)
+	healthHandler := httpadapter.NewHealthHandler(repo.Ping)
 
 	mux := http.NewServeMux()
 	mux.Handle("/orders", handler)
 	mux.Handle("/orders/", handler)
+	mux.Handle("/health", healthHandler)
+	mux.Handle("/health/ready", healthHandler)
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 
 	// middleware
 	var h http.Handler = mux

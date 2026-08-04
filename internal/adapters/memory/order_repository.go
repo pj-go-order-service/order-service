@@ -38,3 +38,7 @@ func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order.Ord
 
 	return o, nil
 }
+
+func (r *OrderRepository) Ping(_ context.Context) error {
+	return nil
+}

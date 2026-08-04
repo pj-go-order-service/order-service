@@ -1,0 +1,207 @@
+basePath: /
+definitions:
+  httpadapter.CreateOrderItem:
+    properties:
+      price:
+        type: integer
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  httpadapter.CreateOrderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/httpadapter.CreateOrderItem'
+        type: array
+    type: object
+  httpadapter.CreateOrderResponse:
+    properties:
+      order_id:
+        type: string
+      status:
+        type: string
+    type: object
+  httpadapter.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  httpadapter.GetOrderItem:
+    properties:
+      name:
+        type: string
+      price:
+        $ref: '#/definitions/httpadapter.GetOrderMoney'
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  httpadapter.GetOrderMoney:
+    properties:
+      amount:
+        type: integer
+      currency:
+        type: string
+    type: object
+  httpadapter.GetOrderResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/httpadapter.GetOrderItem'
+        type: array
+      status:
+        type: string
+      total:
+        $ref: '#/definitions/httpadapter.GetOrderMoney'
+    type: object
+  httpadapter.StatusResponse:
+    properties:
+      status:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Микросервис управления заказами на Go. Чистая архитектура + DDD.
+  title: Order Service API
+  version: "1.0"
+paths:
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новый заказ
+      parameters:
+      - description: Данные заказа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/httpadapter.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Заказ создан
+          schema:
+            $ref: '#/definitions/httpadapter.CreateOrderResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+      summary: Создать заказ
+      tags:
+      - orders
+  /orders/{id}:
+    get:
+      description: Возвращает заказ по ID
+      parameters:
+      - description: ID заказа
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заказ
+          schema:
+            $ref: '#/definitions/httpadapter.GetOrderResponse'
+        "400":
+          description: Некорректный ID
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "404":
+          description: Заказ не найден
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+      summary: Получить заказ
+      tags:
+      - orders
+  /orders/{id}/cancel:
+    post:
+      description: Переводит заказ в статус "canceled"
+      parameters:
+      - description: ID заказа
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заказ отменён
+          schema:
+            $ref: '#/definitions/httpadapter.StatusResponse'
+        "400":
+          description: Некорректный ID
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "404":
+          description: Заказ не найден
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "409":
+          description: Некорректное состояние заказа
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+      summary: Отменить заказ
+      tags:
+      - orders
+  /orders/{id}/pay:
+    post:
+      description: Переводит заказ в статус "paid"
+      parameters:
+      - description: ID заказа
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заказ оплачен
+          schema:
+            $ref: '#/definitions/httpadapter.StatusResponse'
+        "400":
+          description: Некорректный ID
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "404":
+          description: Заказ не найден
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "409":
+          description: Некорректное состояние заказа
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/httpadapter.ErrorResponse'
+      summary: Оплатить заказ
+      tags:
+      - orders
+swagger: "2.0"

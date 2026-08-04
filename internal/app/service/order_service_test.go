@@ -35,6 +35,10 @@ func (m *mockOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*order
 	return o, nil
 }
 
+func (m *mockOrderRepository) Ping(ctx context.Context) error {
+	return nil
+}
+
 func TestOrderService_CreateOrder(t *testing.T) {
 	repo := newMockOrderRepository()
 	svc := service.NewOrderService(repo)

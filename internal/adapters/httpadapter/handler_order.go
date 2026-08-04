@@ -35,10 +35,20 @@ func (h *OrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(path, "/cancel") && r.Method == http.MethodPost:
 		h.cancelOrder(w, r, strings.TrimSuffix(path, "/cancel"))
 	default:
-		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
+// @Summary Создать заказ
+// @Description Создаёт новый заказ
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param request body CreateOrderRequest true "Данные заказа"
+// @Success 201 {object} CreateOrderResponse "Заказ создан"
+// @Failure 400 {object} ErrorResponse "Некорректный запрос"
+// @Failure 500 {object} ErrorResponse "Внутренняя ошибка сервера"
+// @Router /orders [post]
 func (h *OrderHandler) createOrder(w http.ResponseWriter, r *http.Request) {
 	var req CreateOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -84,9 +94,22 @@ func (h *OrderHandler) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(result)
+	_ = json.NewEncoder(w).Encode(CreateOrderResponse{
+		OrderID: result.OrderID,
+		Status:  string(result.Status),
+	})
 }
 
+// @Summary Получить заказ
+// @Description Возвращает заказ по ID
+// @Tags orders
+// @Produce json
+// @Param id path string true "ID заказа"
+// @Success 200 {object} GetOrderResponse "Заказ"
+// @Failure 400 {object} ErrorResponse "Некорректный ID"
+// @Failure 404 {object} ErrorResponse "Заказ не найден"
+// @Failure 500 {object} ErrorResponse "Внутренняя ошибка сервера"
+// @Router /orders/{id} [get]
 func (h *OrderHandler) getOrder(w http.ResponseWriter, r *http.Request, idStr string) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -104,9 +127,41 @@ func (h *OrderHandler) getOrder(w http.ResponseWriter, r *http.Request, idStr st
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(o)
+	resp := GetOrderResponse{
+		ID:     o.ID,
+		Status: string(o.Status),
+		Total: GetOrderMoney{
+			Amount:   o.Total.Amount,
+			Currency: o.Total.Currency,
+		},
+		CreatedAt: o.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	for _, it := range o.Items {
+		resp.Items = append(resp.Items, GetOrderItem{
+			ProductID: string(it.ProductID),
+			Name:      it.Name,
+			Price: GetOrderMoney{
+				Amount:   it.Price.Amount,
+				Currency: it.Price.Currency,
+			},
+			Quantity: it.Quantity,
+		})
+	}
+
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// @Summary Оплатить заказ
+// @Description Переводит заказ в статус "paid"
+// @Tags orders
+// @Produce json
+// @Param id path string true "ID заказа"
+// @Success 200 {object} StatusResponse "Заказ оплачен"
+// @Failure 400 {object} ErrorResponse "Некорректный ID"
+// @Failure 404 {object} ErrorResponse "Заказ не найден"
+// @Failure 409 {object} ErrorResponse "Некорректное состояние заказа"
+// @Failure 500 {object} ErrorResponse "Внутренняя ошибка сервера"
+// @Router /orders/{id}/pay [post]
 func (h *OrderHandler) payOrder(w http.ResponseWriter, r *http.Request, idStr string) {
 	id, err := uuid.Parse(strings.TrimRight(idStr, "/"))
 	if err != nil {
@@ -127,9 +182,20 @@ func (h *OrderHandler) payOrder(w http.ResponseWriter, r *http.Request, idStr st
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "paid"})
+	_ = json.NewEncoder(w).Encode(StatusResponse{Status: "paid"})
 }
 
+// @Summary Отменить заказ
+// @Description Переводит заказ в статус "canceled"
+// @Tags orders
+// @Produce json
+// @Param id path string true "ID заказа"
+// @Success 200 {object} StatusResponse "Заказ отменён"
+// @Failure 400 {object} ErrorResponse "Некорректный ID"
+// @Failure 404 {object} ErrorResponse "Заказ не найден"
+// @Failure 409 {object} ErrorResponse "Некорректное состояние заказа"
+// @Failure 500 {object} ErrorResponse "Внутренняя ошибка сервера"
+// @Router /orders/{id}/cancel [post]
 func (h *OrderHandler) cancelOrder(w http.ResponseWriter, r *http.Request, idStr string) {
 	id, err := uuid.Parse(strings.TrimRight(idStr, "/"))
 	if err != nil {
@@ -150,10 +216,10 @@ func (h *OrderHandler) cancelOrder(w http.ResponseWriter, r *http.Request, idStr
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "canceled"})
+	_ = json.NewEncoder(w).Encode(StatusResponse{Status: "canceled"})
 }
 
 func writeError(w http.ResponseWriter, msg string, status int) {
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Error: msg})
 }
