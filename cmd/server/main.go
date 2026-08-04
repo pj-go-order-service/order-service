@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,6 +26,7 @@ import (
 // @BasePath /
 func main() {
 	cfg := config.Load()
+	setupLogger(cfg.LogLevel)
 
 	// выбираем репозиторий: postgres если указан DATABASE_URL, иначе memory
 	var repo ports.OrderRepository = memory.NewOrderRepository()
@@ -33,13 +34,14 @@ func main() {
 	if cfg.DatabaseURL != "" {
 		pool, err := postgres.NewPool(context.Background(), cfg.DatabaseURL)
 		if err != nil {
-			log.Fatalf("failed to connect to database: %v", err)
+			slog.Error("failed to connect to database", "error", err)
+			os.Exit(1)
 		}
 		defer pool.Close()
 		repo = postgres.NewOrderRepository(pool)
-		log.Println("connected to postgres")
+		slog.Info("connected to postgres")
 	} else {
-		log.Println("using in-memory repository")
+		slog.Info("using in-memory repository")
 	}
 
 	orderService := service.NewOrderService(repo)
@@ -68,21 +70,41 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("order-service started on :%s", cfg.Port)
+		slog.Info("order-service started", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			slog.Error("listen failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-quit
-	log.Println("shutting down server...")
+	slog.Info("shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("server forced to shutdown: %v", err)
+		slog.Error("server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("server exited")
+	slog.Info("server exited")
+}
+
+// setupLogger настраивает slog: текстовый вывод в dev, JSON в prod.
+func setupLogger(level string) {
+	var lvl slog.Level
+	switch level {
+	case "debug":
+		lvl = slog.LevelDebug
+	case "warn":
+		lvl = slog.LevelWarn
+	case "error":
+		lvl = slog.LevelError
+	default:
+		lvl = slog.LevelInfo
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: lvl}))
+	slog.SetDefault(logger)
 }
